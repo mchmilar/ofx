@@ -9,7 +9,8 @@ module OFX
         'CHECKING' => :checking,
         'SAVINGS' => :savings,
         'CREDITLINE' => :creditline,
-        'MONEYMRKT' => :moneymrkt
+        'MONEYMRKT' => :moneymrkt,
+        'CREDIT_CARD' => :credit_card,
       }.freeze
 
       TRANSACTION_TYPES = %w[
@@ -83,10 +84,16 @@ module OFX
       end
 
       def build_account(node)
+        type = if node.name.downcase == 'ccstmttrnrs'
+          ACCOUNT_TYPES['CREDIT_CARD']
+        else
+          ACCOUNT_TYPES[node.search('bankacctfrom > accttype').inner_text.to_s.upcase]
+        end
+
         OFX::Account.new({
                            bank_id: node.search('bankacctfrom > bankid').inner_text,
                            id: node.search('bankacctfrom > acctid, ccacctfrom > acctid').inner_text,
-                           type: ACCOUNT_TYPES[node.search('bankacctfrom > accttype').inner_text.to_s.upcase],
+                           type: type,
                            transactions: build_transactions(node),
                            balance: build_balance(node),
                            available_balance: build_available_balance(node),
